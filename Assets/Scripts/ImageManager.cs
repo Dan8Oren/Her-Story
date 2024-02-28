@@ -24,6 +24,9 @@ public class ImageManager : MonoBehaviour
     private void UpdateImage(object sender, GameManager.ResponseReceivedEventArgs e)
     {
         string imageDescription = e.response.ImagePrompt;
+        if (imageDescription == null)
+            return;
+        
         if (imageDescription.Contains("forest") && imageDescription.Contains("running") && _currentImageIndex == 0)
         {
             _imageComponent.sprite = images[1];

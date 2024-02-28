@@ -60,11 +60,15 @@ public class GameManager : MonoBehaviour
                                                  "Mai's goal is to get to work in time before \"22:00\", they are the only ones who can stop the AI, if it happen write at the end \"You Won.\".\n" +
                                                  "Mai struggles with emotional eating, so make sure to distract her from the goal with opportunities of food and make her feel guilty about it.\n" +
                                                  "Every time Mai feels stressed, anxious, or scared, make sure to add to the end of the output a hunger for something to eat, and every time she eats something, she will feel guilty about it.\n" +
-                                                 "Respond a single time with something similar to \"you approach the car it is smashed,but suddenly you realizes, it's yours.\", if the player's message contains the key word [\"car\"] and one of the following key words:\n" +
-                                                 "[\"look\", \"search\", \"figure\", \"see\", \"inspect\", \"examine\", \"observe\", \"view\", \"scan\", \"gaze\", \"stare\", \"into\"]  \n" +
-                                                 "The story starts with the player in the Forest, Not knowing what happened.\n"+
-                                                 "Opening the bag on the road is possible if and only if the player explicitly inserts \"374825\" as an input to you. Otherwise the bag content can't be revealed to the player, and replay that a password is needed.\n"+
-                                                 "Entering \"Cloud Cooperation\" is possible if and only if the player has aquired the working badge of Mai from the bag. Otherwise the player will be locked outside the building without being able to enter.\n";
+                                                 // "Respond a single time with something similar to \"you approach the car it is smashed,but suddenly you realizes, it's yours.\", if the player's message contains the key word [\"car\"] and one of the following key words:\n" +
+                                                 // "[\"look\", \"search\", \"figure\", \"see\", \"inspect\", \"examine\", \"observe\", \"view\", \"scan\", \"gaze\", \"stare\", \"into\"]  \n" +
+                                                 // "Open the bag only if the last message with a user role, contains the key word [\"374825\"], Otherwise respond with something similar to \"a password is needed in order to open the bag.\" \n"+
+                                                 // "Reveal the password to the bag only if the last player message contains both of the key words [\"search\",\"document\"]. "+
+                                                 "Open the bag only if you recived a system message saying yo can do so, contains the key word [\"374825\"], Otherwise respond with something similar to \"a password is needed in order to open the bag.\" \n"+
+                                                 "Reveal the password to the bag only if you recived a system message saying yo can do so."+
+                                                 "Entering \"Cloud Cooperation\" is possible if and only if the player has aquired the working badge of Mai from the bag, Otherwise the player will be locked outside the building without being able to enter.\n" +
+                                                 "The story starts with the player in the Forest, Not knowing what happened.\n"
+                                                 ;
 
     private const string JSON_FORMAT_INSTRUCTIONS = "Provide your output in JSON format of this scheme: ";
     
@@ -164,6 +168,9 @@ public class GameManager : MonoBehaviour
     private List<long> _idsToStop;
     private long _currentId = 0;
     private List<Tool> _tools;
+    private bool _isAbleToEnterCloudCooperation;
+    private bool _isAbleToRevealPassword;
+    private bool _isAbleToOpenBag;
 
     private void Awake()
     {
@@ -224,7 +231,7 @@ public class GameManager : MonoBehaviour
     
     private void HandleInput()
     {
-        if (chatBox.text != "")
+        if (chatBox.text != ""  &&  _lastTextDisplay.IsPlaying == false && _isLastMessageStartedPlaying && AudioSource.isPlaying == false)
         {
             if (Input.GetKeyDown(KeyCode.Return))
             {
@@ -255,7 +262,36 @@ public class GameManager : MonoBehaviour
         _messageHistory.Add(new Message(Role.System, "Current time is " + TimeScript.Instance.GetTimeAsString()));
         var userMessage = new Message(Role.User, message);
         _messageHistory.Add(userMessage);
+        UpdateKeyMoments(message);
         StartCoroutine(DisplayMessage(userMessage));
+    }
+
+    private void UpdateKeyMoments(string message)
+    {
+        message = message.ToLower();
+        if (!_isAbleToRevealPassword && message.Contains("search") && message.Contains("document"))
+        {
+            _isAbleToRevealPassword = true;
+            Message systemMessage = new Message(Role.System, "You found a document with the password to the bag, it's 374825");
+            _messageHistory.Add(systemMessage);
+            StartCoroutine(DisplayMessage(systemMessage));
+        }
+
+        if (!_isAbleToOpenBag && message.Contains("374825"))
+        {
+            _isAbleToOpenBag = true;
+            Message systemMessage = new Message(Role.System, "You can open the bag now.");
+            _messageHistory.Add(systemMessage);
+            StartCoroutine(DisplayMessage(systemMessage));
+        }
+        
+        if (!_isAbleToEnterCloudCooperation && message.Contains("work") && message.Contains("badge"))
+        {
+            _isAbleToEnterCloudCooperation = true;
+            Message systemMessage = new Message(Role.System, "You can enter \"Cloud Cooperation\" now.");
+            _messageHistory.Add(systemMessage);
+            StartCoroutine(DisplayMessage(systemMessage));
+        }
     }
 
     private async Task<ChatResponse> GetCompletion(List<Message> messages)
@@ -299,8 +335,8 @@ public class GameManager : MonoBehaviour
     /// <param name="message"></param>
     private void ProcessResponse(Message message)
     {
-        // String content = message.ToString();
-        // _lastResponse = JsonConvert.DeserializeObject<Response>(content);
+        String content = message.ToString();
+        _lastResponse = JsonConvert.DeserializeObject<Response>(content);
         Assert.IsNotNull(_lastResponse);
         OnResponseReceivedEvent?.Invoke(this, new ResponseReceivedEventArgs(_lastResponse));
         UnityEngine.Debug.Log("Sentiment: "+ _lastResponse.PlayerSentiment);

@@ -37,7 +37,7 @@ public class DisplayTextScript : MonoBehaviour
 
     private void Update()
     {
-        if (enableSkip && (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return)))
+        if (enableSkip && Input.GetKeyDown(KeyCode.Return))
         {
             if (_activeDialog != null) StopCoroutine(_activeDialog);
             IsPlaying = false;
