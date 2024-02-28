@@ -1,0 +1,11 @@
+﻿{
+  "storyText": "You open your eyes lying on the road, with throbbing ache in your head.\nYou don't remember a thing, You are in a forest and It's dark.\nYou see a car, a bag on the road and a phone in your hand and You're wondering who you are and what you are doing here.",  // string, the story text to present to the player, must end with an event that invites the player to make a choices.
+  "callToAction": "You should open the bag.",   // string, call-to-action or a hint for the player on what to do next. Use a suggestive tone (e.g. start with "You can ..." or "You might ..."). Don't suggest passive actions.
+  "storyEvent": "A sound of explosions and sirens is heard from a light in the distance",   // string, additional story event that happens regardless of the player's input, in order to push the story forward. It might be poetic, it might be surprising, or even very dramatic.
+  "actionTime": "00:02",   // string, the player's last action time in the story, It should be in the format "00:MM", and a number between 1 to 30 (e.g. "00:30", for a 30 min long action).
+  "currentTime": "21:00",   // string, the player's current time in the story, start with the value "21:00". It should be in the format "HH:MM" (e.g. "15:30").
+  "goalProgress": 0,   // float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world.
+  "playerEngagement": 0.5,   //float between 0 and 1, where 0 is bored and 1 is excited
+  "playerSentiment": "joy", // string describing the player's emotional state, or 'Unknown' if it's not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' ) 
+  "isGameOver": false  // boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 02:00), false otherwise.
+}
