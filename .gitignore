@@ -152,4 +152,4 @@ fabric.properties
 
 #Open AI file
 *.openai
-Assets/.openai
+/[Aa]ssets/.openai
