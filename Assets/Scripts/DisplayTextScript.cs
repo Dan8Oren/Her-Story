@@ -30,8 +30,8 @@ public class DisplayTextScript : MonoBehaviour
         _textMeshProUGUI.SetText("");
         if (_activeDialog == null)
         {
-            // _activeDialog = StartCoroutine(AnimateDialog(_textToDisplay)); //option 1
-            _activeDialog = StartCoroutine(TypeWriterTMP(_textToDisplay)); //option 2
+            _activeDialog = StartCoroutine(AnimateDialog(_textToDisplay)); //option 1
+            // _activeDialog = StartCoroutine(TypeWriterTMP(_textToDisplay)); //option 2
         }
     }
 
@@ -65,7 +65,7 @@ public class DisplayTextScript : MonoBehaviour
                 }
                 alphaIndex++;
             }
-            _textMeshProUGUI.text = originalText;
+            // _textMeshProUGUI.text = originalText;
             displayedText = _textMeshProUGUI.text.Insert(alphaIndex, leadingCharBeforeDelay?leadingChar + HTML_ALPHA : HTML_ALPHA);
             _textMeshProUGUI.text = displayedText;
             yield return new WaitForSeconds(timeBetweenChars);
@@ -95,12 +95,14 @@ public class DisplayTextScript : MonoBehaviour
         {
             if (closing == 2) isOnHtml = false;
             tempToShow += c;
-            _textMeshProUGUI.SetText(tempToShow);
+            _textMeshProUGUI.SetText(tempToShow +  leadingChar);
             if (!isOnHtml) yield return new WaitForSeconds(timeBetweenChars);
             isOnHtml = HandleHtmlText(c, isOnHtml, ref closing);
+            _callback?.Invoke();
         }
         
         IsPlaying = false;
+        _textMeshProUGUI.text = dialog;
     }
 
     /**

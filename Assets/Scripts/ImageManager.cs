@@ -26,15 +26,18 @@ public class ImageManager : MonoBehaviour
         string imageDescription = e.response.ImagePrompt;
         if (imageDescription == null)
             return;
-        
-        if (imageDescription.Contains("forest") && imageDescription.Contains("running") && _currentImageIndex == 0)
+        imageDescription = imageDescription.ToLower();
+        if (imageDescription.Contains("forest") &&
+            (imageDescription.Contains("running") || imageDescription.Contains("through"))
+            && _currentImageIndex == 0)
         {
             _imageComponent.sprite = images[1];
             _currentImageIndex = 1;
             return;
         }
-        if ((imageDescription.Contains("work") || imageDescription.Contains("Cloud Cooperation")) &&
-            (imageDescription.Contains("arrive") || imageDescription.Contains("enter"))&& _currentImageIndex < 2)
+        if ((imageDescription.Contains("work") || imageDescription.Contains("cloud cooperation")) &&
+            (imageDescription.Contains("arrive") || imageDescription.Contains("enter") || imageDescription.Contains("entrance"))
+            && _currentImageIndex < 2)
         {
             _imageComponent.sprite = images[2];
             _currentImageIndex = 2;

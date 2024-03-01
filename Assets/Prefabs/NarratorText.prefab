@@ -155,6 +155,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enableSkip: 1
-  timeBetweenChars: 0.05
+  timeBetweenChars: 0.04
   leadingChar: ' |'
-  leadingCharBeforeDelay: 1
+  leadingCharBeforeDelay: 0

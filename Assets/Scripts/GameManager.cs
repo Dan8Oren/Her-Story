@@ -25,6 +25,7 @@ public class GameManager : MonoBehaviour
     private const int MAX_TOKENS = 16385; //can be decreased to improve response time
     
     public static GameManager Instance;
+    [SerializeField] public OpenAIConfiguration configuration;
     public bool ShouldUsePreciseBackstory = false;
     [SerializeField][Range(0,1f)] private float chanceToShowEvents = 0.25f;
     [SerializeField] private Color highlightedColor;
@@ -32,7 +33,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] GameObject loadingAnimation;
     [SerializeField] GameObject gameOverPopUp;
     [SerializeField] GameObject chatPanel;
-    [SerializeField] AutoScroll autoScroll;
+    [FormerlySerializedAs("autoScroll")] [SerializeField] TextViewBehavior textViewBehavior;
     [SerializeField] GameObject narratorTextObject;
     [SerializeField] GameObject playerTextObject;
     [SerializeField] GameObject eventTextObject;
@@ -60,12 +61,10 @@ public class GameManager : MonoBehaviour
                                                  "Mai's goal is to get to work in time before \"22:00\", they are the only ones who can stop the AI, if it happen write at the end \"You Won.\".\n" +
                                                  "Mai struggles with emotional eating, so make sure to distract her from the goal with opportunities of food and make her feel guilty about it.\n" +
                                                  "Every time Mai feels stressed, anxious, or scared, make sure to add to the end of the output a hunger for something to eat, and every time she eats something, she will feel guilty about it.\n" +
-                                                 // "Respond a single time with something similar to \"you approach the car it is smashed,but suddenly you realizes, it's yours.\", if the player's message contains the key word [\"car\"] and one of the following key words:\n" +
-                                                 // "[\"look\", \"search\", \"figure\", \"see\", \"inspect\", \"examine\", \"observe\", \"view\", \"scan\", \"gaze\", \"stare\", \"into\"]  \n" +
                                                  // "Open the bag only if the last message with a user role, contains the key word [\"374825\"], Otherwise respond with something similar to \"a password is needed in order to open the bag.\" \n"+
                                                  // "Reveal the password to the bag only if the last player message contains both of the key words [\"search\",\"document\"]. "+
-                                                 "Open the bag only if you recived a system message saying yo can do so, contains the key word [\"374825\"], Otherwise respond with something similar to \"a password is needed in order to open the bag.\" \n"+
-                                                 "Reveal the password to the bag only if you recived a system message saying yo can do so."+
+                                                 "Open the bag only if you recieved a system message saying yo can do so (NOT THIS ONE), Otherwise respond with something similar to \"a password is needed in order to open the bag.\" \n"+
+                                                 "Reveal the password to the bag only if you recieved a system message saying yo can do so (NOT THIS ONE)."+
                                                  "Entering \"Cloud Cooperation\" is possible if and only if the player has aquired the working badge of Mai from the bag, Otherwise the player will be locked outside the building without being able to enter.\n" +
                                                  "The story starts with the player in the Forest, Not knowing what happened.\n"
                                                  ;
@@ -73,16 +72,16 @@ public class GameManager : MonoBehaviour
     private const string JSON_FORMAT_INSTRUCTIONS = "Provide your output in JSON format of this scheme: ";
     
     private const string RESPONSE_INSTRUCTIONS = "The JSON parameters are as follows:\n" +
-                                                 "\"storyText\": string, the story text to present to the player, must end with an event that invites the player to make a choices.\n" +
-                                                 "\"callToAction\": string, call-to-action or a hint for the player on what to do next. Use a suggestive tone (e.g. start with \"You can ...\" or \"You might ...\"). Don't suggest passive actions.\n" +
-                                                 "\"storyEvent\": string, additional story event that happens regardless of the player's input, in order to push the story forward. It might be poetic, it might be surprising, or even very dramatic.\n" +
-                                                 "\"actionTime\": string, the time in the story that took the player to finish his last action, It should be in the format \"00:MM\", and a number between 1 to 30 (e.g. \"00:30\", for a 30 min long action).\n" +
-                                                " \"imagePrompt\": string, a description of the image that should be displayed to the player, it should be a 2D image that represents the current state of the story, Mai if she apears, must look the same in all of them.\n" +
+                                                 // "\"storyText\": string, the story text to present to the player, must end with an event that invites the player to make a choices.\n" +
+                                                 // "\"callToAction\": string, call-to-action or a hint for the player on what to do next. Use a suggestive tone (e.g. start with \"You can ...\" or \"You might ...\"). Don't suggest passive actions.\n" +
+                                                 // "\"storyEvent\": string, additional story event that happens regardless of the player's input, in order to push the story forward. It might be poetic, it might be surprising, or even very dramatic.\n" +
+                                                 // "\"actionTime\": string, the time in the story that took the player to finish his last action, It should be in the format \"00:MM\", and a number between 1 to 30 (e.g. \"00:30\", for a 30 min long action).\n" +
+                                                // " \"imagePrompt\": string, a description of the image that should be displayed to the player, it should be a 2D image that represents the current state of the story, Mai if she apears, must look the same in all of them.\n" +
                                                  //                   "\"currentTime\": string, the player's current time in the story, start with the value \"21:00\". It should be in the format \"HH:MM\" (e.g. \"15:30\").\n" +
-                                                 "\"goalProgress\": float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world.\n" +
-                                                 "\"playerEngagement\": float between 0 and 1, where 0 is bored and 1 is excited\n" +
-                                                 "\"playerSentiment\": string describing the player's emotional state, or 'Unknown' if it's not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' )\n" +
-                                                 "\"isGameOver\": boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 02:00), false otherwise.\n" +
+                                                 // "\"goalProgress\": float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world.\n" +
+                                                 // "\"playerEngagement\": float between 0 and 1, where 0 is bored and 1 is excited\n" +
+                                                 // "\"playerSentiment\": string describing the player's emotional state, or 'Unknown' if it's not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' )\n" +
+                                                 // "\"isGameOver\": boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 02:00), false otherwise.\n" +
                                                  "You should limit the length of the output texts:\n" +
                                                  "\"storyText\" maximum length is 50 words. It can be changed by a system message.\n" +
                                                  "\"callToAction\" maximum length is always 15 words.\n" +
@@ -167,11 +166,11 @@ public class GameManager : MonoBehaviour
     private DisplayTextScript _lastTextDisplay;
     private List<long> _idsToStop;
     private long _currentId = 0;
-    private List<Tool> _tools;
+    private Tool _tool;
+    private bool _isFirstAssistantMessage = true;
     private bool _isAbleToEnterCloudCooperation;
     private bool _isAbleToRevealPassword;
     private bool _isAbleToOpenBag;
-
     private void Awake()
     {
         _idsToStop = new List<long>();
@@ -297,9 +296,13 @@ public class GameManager : MonoBehaviour
     private async Task<ChatResponse> GetCompletion(List<Message> messages)
     {
         // "gpt-4-turbo-preview" is the most powerful model available
-        // var chatRequest = new ChatRequest(messages, tools:_tools, toolChoice:"auto" ,model: "gpt-3.5-turbo-0125");
-        var chatRequest = new ChatRequest(messages,model: "gpt-3.5-turbo-0125", responseFormat: ChatResponseFormat.Json);
+        Tool[] t = { _tool };
+        var chatRequest = new ChatRequest(messages, tools:t, toolChoice:_tool.Function.Name ,model: "gpt-3.5-turbo-0125");
+        // var chatRequest = new ChatRequest(messages,model: "gpt-3.5-turbo-0125", responseFormat: ChatResponseFormat.Json);
         ChatResponse response = await API.ChatEndpoint.GetCompletionAsync(chatRequest);
+        var usedTool = response.FirstChoice.Message.ToolCalls[0];
+        Debug.Log($"FunctionCall: {usedTool.Function.Name} | Args: {usedTool.Function.Arguments}");
+        await usedTool.InvokeFunctionAsync<Response>();
         foreach (var choice in response.Choices)
         {
             Debug.Log($"[{choice.Index}] {choice.Message.Role}: {choice} | Finish Reason: {choice.FinishReason}");
@@ -320,23 +323,24 @@ public class GameManager : MonoBehaviour
         }
         loadingAnimation.SetActive(true);
         ChatResponse response = await GetCompletion(_messageHistory);
-        var numOfTokens = response.Usage.PromptTokens;
-        Debug.Log("Number of tokens in prompt: " + numOfTokens);
-        if (numOfTokens >= MAX_TOKENS)
-            HandleTooManyTokens();
-       
-        var firstResponse = response.FirstChoice;
-        ProcessResponse(firstResponse.Message);
+        // var numOfTokens = response.Usage.PromptTokens;
+        // Debug.Log("Number of tokens in prompt: " + numOfTokens);
+        // if (numOfTokens >= MAX_TOKENS)
+        //     HandleTooManyTokens();
+        //
+        // var firstResponse = response.FirstChoice;
+        // ProcessResponse(firstResponse.Message);
     }
 
     /// <summary>
     /// splits response from chatGPT to different components
     /// </summary>
     /// <param name="message"></param>
-    private void ProcessResponse(Message message)
+    private void ProcessResponse(Message message = null, Response response = null)
     {
-        String content = message.ToString();
-        _lastResponse = JsonConvert.DeserializeObject<Response>(content);
+        // String content = message.ToString();
+        // _lastResponse = JsonConvert.DeserializeObject<Response>(content);
+        _lastResponse = response;
         Assert.IsNotNull(_lastResponse);
         OnResponseReceivedEvent?.Invoke(this, new ResponseReceivedEventArgs(_lastResponse));
         UnityEngine.Debug.Log("Sentiment: "+ _lastResponse.PlayerSentiment);
@@ -383,7 +387,12 @@ public class GameManager : MonoBehaviour
         {
             case Role.Assistant:
                 text = Instantiate(isEvent ? eventTextObject : narratorTextObject, chatPanel.transform);
-                TextToSpeech(content, id);
+                if (_isFirstAssistantMessage)
+                {
+                    _isFirstAssistantMessage = false;
+                    TextToSpeech(OPENING_LINE, id);
+                }else TextToSpeech(content, id);
+                
                 content = isEvent? $"({content})" : content;
                 isWaitingForAudio = true;
                 break;
@@ -405,7 +414,7 @@ public class GameManager : MonoBehaviour
         _lastTextDisplay = text.GetComponent<DisplayTextScript>();
         Assert.IsNotNull(_lastTextDisplay);
         _lastTextDisplay.enabled = true;
-        _lastTextDisplay.SetDisplayText(content, id, isWaitingForAudio,autoScroll.ScrollToBottom);
+        _lastTextDisplay.SetDisplayText(content, id, isWaitingForAudio,textViewBehavior.ScrollToBottom);
         _lastTextDisplay.SkipMessageEvent += OnSkipMessage;
         if (_isGameOver && id == _currentId - 1)
         {
@@ -471,7 +480,7 @@ public class GameManager : MonoBehaviour
 
     private void InitializeOpenAI()
     {
-        API = new OpenAIClient(new OpenAIAuthentication().LoadFromDirectory("Assets"));
+        API = new OpenAIClient(configuration);
         Response response = new Response(
             storyText:
             "You open your eyes lying on the road, with throbbing ache in your head.\nYou don't remember a thing, You are in a forest and It's dark.\nYou see a car, a bag on the road and a phone in your hand and You're wondering who you are and what you are doing here.", // string, the story text to present to the player, must end with an event that invites the player to make a choices.
@@ -480,65 +489,40 @@ public class GameManager : MonoBehaviour
             "A sound of explosions and sirens is heard from a light in the distance", // string, additional story event that happens regardless of the player's input, in order to push the story forward. It might be poetic, it might be surprising, or even very dramatic.
             actionTime: "00:02", // string, the player's last action time in the story, It should be in the format "00:MM", and a number between 1 to 30 (e.g. "00:30", for a 30 min long action).
             imagePrompt: "A woman sitting on the car road near a crashed car from an accident, alone, in a forest, surrounded by trees, at night , 2D",
-            currentTime: "21:00", // string, the player's current time in the story, start with the value "21:00". It should be in the format "HH:MM" (e.g. "15:30").
             goalProgress: 0f, // float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world.
-            playerEngagement: 0.5f, //float between 0 and 1, where 0 is bored and 1 is excited
             playerSentiment: "joy", // string describing the player's emotional state, or 'Unknown' if it's not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' ) 
             isGameOver: false // boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 22:00), false otherwise.
         );
         String jsonExample = JsonConvert.SerializeObject(response);
-        // _tools = new List<Tool>
-        // {
-        //     Tool.FromFunc("GenerateResponseObject", 
-        //         function: (
-        //             string storyText, 
-        //             string callToAction, 
-        //             string storyEvent, 
-        //             string actionTime, 
-        //             string imagePrompt, 
-        //             string playerSentiment, 
-        //             float goalProgress, 
-        //             bool isGameOver
-        //             ) =>
-        //     {
-        //         return new Response(storyText, callToAction, storyEvent, actionTime, imagePrompt,
-        //             "21:00",
-        //             goalProgress,
-        //             0.5f,
-        //             playerSentiment, isGameOver);
-        //     })
-        // };
-        // string highlightedOpeningLine = OPENING_LINE
-        //     .Replace("car", $"<color={highlightedColor}>car</color>")
-        //     .Replace("bag", $"<color={highlightedColor}>bag</color>")
-        //     .Replace("phone", $"<color={highlightedColor}>phone</color>");
+        Tool.ClearRegisteredTools();
+        _tool = Tool.GetOrCreateTool(typeof(GameManager), nameof(GameManager.GenerateResponseObject));
+        string hexColor = ToHex(highlightedColor);
+        string highlightedOpeningLine = OPENING_LINE
+            .Replace("car", $"<color={hexColor}>car</color>")
+            .Replace("bag", $"<color={hexColor}>bag</color>")
+            .Replace("phone", $"<color={hexColor}>phone</color>");
         _messageHistory = new List<Message>
         {
             new Message(Role.System, BEHAVIOR_INSTRUCTIONS),
-            new Message(Role.System, JSON_FORMAT_INSTRUCTIONS + jsonExample),
+            // new Message(Role.System, JSON_FORMAT_INSTRUCTIONS + jsonExample),
             new Message(Role.System, RESPONSE_INSTRUCTIONS),
             new Message(Role.System, ShouldUsePreciseBackstory ? PRECISE_BACKSTORY : BACKSTORY),
-            new Message(Role.Assistant, OPENING_LINE),
+            new Message(Role.Assistant, highlightedOpeningLine),
             new Message(Role.Assistant, OPENING_CALL_TO_ACTION),
         };
     }
-
-    // private Response GenerateResponseObject(
-    //     string storyText,
-    //     string callToAction,
-    //     string storyEvent,
-    //     string actionTime,
-    //     string imagePrompt,
-    //     string playerSentiment,
-    //     float goalProgress,
-    //     bool isGameOver)
-    // {
-    //     return new Response(storyText, callToAction, storyEvent, actionTime, imagePrompt,
-    //         "21:00",
-    //         goalProgress,
-    //         0.5f,
-    //         playerSentiment, isGameOver);
-    // }
+    public static string ToHex(Color color)
+    {
+        Color32 color32 = color;
+        return "#" + color32.r.ToString("X2") + color32.g.ToString("X2") + color32.b.ToString("X2");
+    }
+    [Function("Generates a 'Response' object containing the relevant information on order the continue the story based on the player's action")]
+    public static Task GenerateResponseObject(Response response)
+    {
+        
+        GameManager.Instance.ProcessResponse(response: response);
+        return Task.CompletedTask;
+    }
 
     public event EventHandler<EventArgs> GameOverEvent;
     public event EventHandler<ResponseReceivedEventArgs> OnResponseReceivedEvent;
