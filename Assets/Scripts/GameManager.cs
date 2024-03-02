@@ -6,6 +6,7 @@ using TMPro;
 using UnityEngine;
 using System;
 using System.Collections;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -23,25 +24,33 @@ using Tool = OpenAI.Tool;
 public class GameManager : MonoBehaviour
 {
     private const int MAX_TOKENS = 16385; //can be decreased to improve response time
-    
     public static GameManager Instance;
-    [SerializeField] public OpenAIConfiguration configuration;
+    [Header("Game Settings")]
     public bool ShouldUsePreciseBackstory = false;
+    [SerializeField] private Color winColor;
     [SerializeField][Range(0,1f)] private float chanceToShowEvents = 0.25f;
-    [SerializeField] private Color highlightedColor;
+    [SerializeField] private int numOfHints;
+    [SerializeField] private AudioClip gameWonClip;
+    [SerializeField] private AudioClip gameLoseClip;
+    [SerializeField] private AudioClip tickingClockClip;
     
-    [SerializeField] GameObject loadingAnimation;
+    [Header("UI Related")]
     [SerializeField] GameObject gameOverPopUp;
+    [SerializeField] GameObject loadingAnimation;
+    [SerializeField] TextMeshProUGUI gameOverText;
+    [SerializeField] TextMeshProUGUI getHintText;    
+    
+    [Header("Code Related")]
+    [SerializeField] public OpenAIConfiguration configuration;
+    [SerializeField] TextViewBehavior textViewBehavior;
+    [SerializeField] Button getHintButton;    
+    [SerializeField] Button continueButton;    
     [SerializeField] GameObject chatPanel;
-    [FormerlySerializedAs("autoScroll")] [SerializeField] TextViewBehavior textViewBehavior;
     [SerializeField] GameObject narratorTextObject;
     [SerializeField] GameObject playerTextObject;
     [SerializeField] GameObject eventTextObject;
     [SerializeField] TMP_InputField chatBox;
-    public OpenAIClient API { get;private set; }
-    public AudioSource AudioSource { get; private set; }
-    
-    public bool IsGameWon { get; private set; }
+
     private const string BEHAVIOR_INSTRUCTIONS = "You are an narrator for a single player interactive game about the real world.\n" +
                                                  "The game is text-based, and the player interacts with the game by typing commands over the main character \"Mai\".\n" +
                                                  "Craft brief yet vivid sentences that empower players to make choices that will progress them in the backstory, and eventually reaching their goal.\n" +
@@ -57,15 +66,15 @@ public class GameManager : MonoBehaviour
                                                  "The AI is a super intelligent program that got access to the internet and manipulating electronic things to create havoc and disorder, all while trying to decipher the codes for the U.S. army nuclear bombs.\n" +
                                                  "Add into the storyline apocalyptic scenarios and/or AI related things to give the player a better understanding of the world they are in.\n" +
                                                  "Mai has a phone in their hand, and a bag with them.\n" +
-                                                 "If the \"currentTime\" exceeds \"21:59\" or the player does something wrong, the player loses, describe what what happen and add to the end \"The game has ended. You Lost.\".\n" +
-                                                 "Mai's goal is to get to work in time before \"22:00\", they are the only ones who can stop the AI, if it happen write at the end \"You Won.\".\n" +
+                                                 "If the \"currentTime\" exceeds \"22:19\" or the player does something wrong, the player loses, describe what what happen and add to the end \"The game has ended. You Lost.\".\n" +
+                                                 "Mai's goal is to get to work in time before \"22:20\", they are the only ones who can stop the AI, if it happen write at the end \"You Won.\".\n" +
                                                  "Mai struggles with emotional eating, so make sure to distract her from the goal with opportunities of food and make her feel guilty about it.\n" +
                                                  "Every time Mai feels stressed, anxious, or scared, make sure to add to the end of the output a hunger for something to eat, and every time she eats something, she will feel guilty about it.\n" +
                                                  // "Open the bag only if the last message with a user role, contains the key word [\"374825\"], Otherwise respond with something similar to \"a password is needed in order to open the bag.\" \n"+
                                                  // "Reveal the password to the bag only if the last player message contains both of the key words [\"search\",\"document\"]. "+
-                                                 "Open the bag only if you recieved a system message saying yo can do so (NOT THIS ONE), Otherwise respond with something similar to \"a password is needed in order to open the bag.\" \n"+
-                                                 "Reveal the password to the bag only if you recieved a system message saying yo can do so (NOT THIS ONE)."+
-                                                 "Entering \"Cloud Cooperation\" is possible if and only if the player has aquired the working badge of Mai from the bag, Otherwise the player will be locked outside the building without being able to enter.\n" +
+                                                 "Open the bag only if you recieved a system message saying yo can do so (NOT THIS ONE), Otherwise respond with something similar to \"the bag is locked, a 6 digits password is needed in order to open the bag.\" \n"+
+                                                 // "Reveal the password to the bag only if you recieved a system message saying yo can do so (NOT THIS ONE)."+
+                                                 "Entering \"Cloud Cooperation\" is possible there is a system message (NOT THIS ONE) who says the player has found a badge, Otherwise the player will be locked outside the building without being able to enter.\n" +
                                                  "The story starts with the player in the Forest, Not knowing what happened.\n"
                                                  ;
 
@@ -80,8 +89,9 @@ public class GameManager : MonoBehaviour
                                                  //                   "\"currentTime\": string, the player's current time in the story, start with the value \"21:00\". It should be in the format \"HH:MM\" (e.g. \"15:30\").\n" +
                                                  // "\"goalProgress\": float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world.\n" +
                                                  // "\"playerEngagement\": float between 0 and 1, where 0 is bored and 1 is excited\n" +
-                                                 // "\"playerSentiment\": string describing the player's emotional state, or 'Unknown' if it's not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' )\n" +
+                                                 // "\"playerSentiment\": string describing the player's emotional state, or 'Unknown' if it is not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' )\n" +
                                                  // "\"isGameOver\": boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 02:00), false otherwise.\n" +
+                                                "To help the player see words they can interact with in the stroyEvent, wrap them with ' (e.g. 'Internet Browser')"+
                                                  "You should limit the length of the output texts:\n" +
                                                  "\"storyText\" maximum length is 50 words. It can be changed by a system message.\n" +
                                                  "\"callToAction\" maximum length is always 15 words.\n" +
@@ -108,8 +118,8 @@ public class GameManager : MonoBehaviour
                                              "Amid her journey to work on foot, citing her vehicle's damage, she overcomes various obstructions and temptings, including aggressive bandits, a chocolate factory, and free ice cream. " +
                                              "She must remain resolute, for time is against her. \n" +
                                              "By \"21:30\", Rachel calls a second time, alerting Mai of the AI's pursuit of nuclear control. " +
-                                             "The military offers a tight deadline; she has until \"22:00\" to halt the AI, for it obeys only her. " +
-                                             "Failure, signifies a nuclear apocalypse. Her goal remains clear - reach work by \"22:00\" to prevent the AI's destructive intentions.\"";
+                                             "The military offers a tight deadline; she has until \"22:20\" to halt the AI, for it obeys only her. " +
+                                             "Failure, signifies a nuclear apocalypse. Her goal remains clear - reach work by \"22:20\" to prevent the AI's destructive intentions.\"";
     private const string BACKSTORY = "Base your output on the following backstory:\n" +
                                      "\"Today, an Artificial Intelligence decided it will be for the best to cure the world from the human beings.\n" +
                                      "News reports are coming in from all over the world, the AI has taken control of the internet and is causing havoc.\n" +
@@ -117,47 +127,46 @@ public class GameManager : MonoBehaviour
                                      "As Mai left home in her car trying to get to work and persuade the AI to stop, fate deals her a cruel blow as she is involved in a car accident.\n" +
                                      "Mai hit her head, leaving her with no knowledge of anything.\n" +
                                      "At \"21:00\", Lying on the road in the middle of a forest with an headache, she tries to figure out what is going on.\n" +
-                                     "With time ticking away and rain pouring down, she must understand what happened and get to work before it's too late.\n" +
+                                     "With time ticking away and rain pouring down, she must understand what happened and get to work before it is too late.\n" +
                                      "Looking around Mai sees a car, a forest, a bag on the road and a phone in her hand.\n" +
                                      "Mai pickes up the bag infront of her and sees it is locked with a 6 digits password."+
-                                     "she decides to go over to the car, it's unfunctional, the windows are broken, one door is detached, and the air bags are open."+
-                                     "By searching inside the car she finds blood on the steering wheel, a half eaten sandwitch and pieces of glass and printed documents that are scattered everywhere"+
-                                     "By breefing over the documents, Mai sees they are relateed to a company named \"Cloud Cooperation\"."+
-                                     "By looking closly at the documents she finds alot of numbers, graphs and analytics that she doesn't understand. yet at one of the pages she sees the following writen by hand \"374825\"." +
-                                     "Using the numbers writen by hand, she opens the locked bag on the floor. Inside the bag she finds a chocolate snack bar and a worker badge with a photo and her name on it, "+
+                                     "she decides to go over to the car, it is unfunctional, the windows are broken, one door is detached, and the air bags are open."+
+                                     "By searching inside the car she finds 'blood' on the steering wheel, a half eaten 'sandwitch' and pieces of glass and 'printed' 'documents' that are scattered everywhere"+
+                                     "By breefing over the documents, Mai sees they are relateed to a company named 'Cloud Cooperation'."+
                                      "Looking at the chocolate snack bar, Mai feels a deep urge inside of her, not being able to resist she eats it almost uncontrollbly."+
-                                     "Mai takes the badge and opens her phone, at the phone she has four options to choose from, the 'Photos' app, 'News' app, 'Calls' app, 'Internet Browser' app and 'Messages' app.\n" +
+                                     "Mai takes the badge and opens her phone, at the phone she has four options to choose from, the 'Photos' app, 'News' app, 'Calls' app, 'Internet-Browser' app and 'Messages' app.\n" +
                                      "At her Photos she sees an images of her in a company named \"Cloud Cooperation\" and nothing else.\n" +
                                      "At the News App she sees havoc all over the world, traffic lights lost logic, thousands dead by accidents,all currencies lost their value, riots, and more..\n" +
                                      "At her Calls she has allot of missed calls from names she doesn't remember.\n" +
-                                     "At her messages she sees a message from 'Rachel my Boss' saying \"Mai, call me as soon as you can, it's urgent\".\n" +
-                                     "At the Internet Browser she find about \"Cloud Cooperation\", and that this is a huge company with a very popular Artificial intelligence.\n" +
-                                     "By getting into the workers section at the \"Cloud Cooperation\" website, she finds her self and It is written 'Artificial intelligence ethics consultant'.\n" +
+                                     "At her messages she sees a message from 'Rachel my Boss' saying \"Mai, call me as soon as you can, it is urgent\".\n" +
+                                     "At the Internet Browser she find about 'Cloud Cooperation', and that this is a huge company with a very popular Artificial intelligence.\n" +
+                                     "By getting into the workers section at the 'Cloud Cooperation' website, she finds her self and It is written 'Artificial intelligence ethics consultant'.\n" +
                                      "When Mai calls her boss, she finds out that the AI she consult to, started behave wrong making allot of accidents and as a result people are dead, she needs to get back to work and stop it.\n" +
                                      "Not knowing the true goals of the AI, Mai tries to find her way to work, looking at the car near her she understand it is damaged and not operational.\n" +
                                      "while walking alongside the road she encounter with allot of different scenarios and temptations like dangerous armed bandits, a chocolate factory, her favorite ice cream free at a wrecked mini market and etc...\n" +
                                      "she must be determined to keep walking, becuase time is ticking away. \n" +
                                      "When time sets to \"21:30\" she receives a second call from Rachel her boss," +
                                      " saying The AI is trying to get control over the atomic bombs and find the encrypted password for them," +
-                                     " the military says there is until \"22:00\" before it will be too late, you need to get to work and stop it.\n" +
-                                     "Get to work before \"22:00\", and stop the AI, it listens only to you.\n" +
-                                     "Any other choice will lead to failure, and the AI nuking all of the world leading to it's end.\"";
+                                     " the military says there is until \"22:20\" before it will be too late, you need to get to work and stop it.\n" +
+                                     "Get to work before \"22:20\", and stop the AI, it listens only to you.\n" +
+                                     "Any other choice will lead to failure, and the AI nuking all of the world leading to it is end.\"";
     
     
     private const string OPENING_LINE ="You open your eyes lying on the road, with throbbing ache in your head.\n" +
-                                      "You don't remember a thing, You are in a forest and It's dark.\n" +
-                                      "You see a car, a bag on the road and a phone in your hand and You're wondering who you are and what you are doing here.";
+                                      "You don't remember a thing, You are in a forest and it is dark.\n" +
+                                      "You see a 'car', a 'bag' on the road and a 'phone' in your hand and You're wondering who you are and what you are doing here.";
     
     private const string OPENING_CALL_TO_ACTION = "What will you do next?";
     
+    private const string GAME_OVER_MESSAGE = "'You Lost!, It was too late, on 22:20 PM, the AI lunched over 9000+ atomic bombs all over the word\\n destroyed itself and humanity creating a nuclear winter for the next thousand years.\\n";
+    
     private List<Message> _messageHistory = new List<Message>();
+    private List<Message> _instructions = new List<Message>();
     private Response _lastResponse;
 
-    private float _callToActionTimer = 10f;
-    private float _storyEventTimer = 5f;
-    private float _callToActionTime = 10f;
-    private float _storyEventTime = 5f;
-    private bool _callToActionShown;
+    private float _storyEventTimer = 12f;
+    private float _storyEventTime = 12f;
+    private bool _callToActionShown = true;
     private bool _storyEventShown;
     private int _lastInputLength = 0;
     private bool _isMai = false;
@@ -166,11 +175,14 @@ public class GameManager : MonoBehaviour
     private DisplayTextScript _lastTextDisplay;
     private List<long> _idsToStop;
     private long _currentId = 0;
+    private long _idToContinue;
     private Tool _tool;
-    private bool _isFirstAssistantMessage = true;
     private bool _isAbleToEnterCloudCooperation;
     private bool _isAbleToRevealPassword;
     private bool _isAbleToOpenBag;
+    private bool _isCallingRachel;
+
+
     private void Awake()
     {
         _idsToStop = new List<long>();
@@ -180,15 +192,21 @@ public class GameManager : MonoBehaviour
         IsGameWon = false;
         GameOverEvent += (sender, args) =>
         {
+            getHintButton.interactable = false;
+            continueButton.interactable = false;
             gameOverPopUp.SetActive(true);
-            var time = TimeScript.Instance.GetCurrentTime();
+            // var time = TimeScript.Instance.GetCurrentTime();
             if (IsGameWon)
             {
-                gameOverPopUp.GetComponent<TextMeshProUGUI>().text = "You Won!";
+                AudioSource.PlayOneShot(gameWonClip);
+                gameOverText.text = "You Won!";
+                gameOverText.color = winColor;
                 return;
             }
-
-            gameOverPopUp.GetComponent<TextMeshProUGUI>().text = "You Lost!";
+            Message gameOverMessage = new Message(Role.Assistant, GAME_OVER_MESSAGE);
+            AudioSource.PlayOneShot(gameLoseClip);
+            StartCoroutine(DisplayMessage(gameOverMessage));
+            gameOverText.text = "You Lost!";
         };
     }
 
@@ -199,7 +217,8 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator DisplayStartMessages()
     {
-        foreach (var message in _messageHistory)
+        List<Message> allMessages = _instructions.Concat(_messageHistory).ToList();
+        foreach (var message in allMessages)
         {
             StartCoroutine(DisplayMessage(message));
             yield return new WaitUntil(() => _isLastMessageStartedPlaying);
@@ -222,8 +241,8 @@ public class GameManager : MonoBehaviour
         HandleInput();
         if (_lastResponse != null)
         {
-            HandleTimedEvent(_lastResponse.CallToAction, ref _callToActionTimer, ref _callToActionShown, _callToActionTime);
-            HandleTimedEvent(_lastResponse.StoryEvent, ref _storyEventTimer, ref _storyEventShown, _storyEventTime, true);
+            // HandleTimedEvent(_lastResponse.CallToAction, ref _callToActionTimer, ref _callToActionShown, _callToActionTime);
+            // HandleTimedEvent(_lastResponse.StoryEvent, ref _storyEventTimer, ref _storyEventShown, _storyEventTime, true);
             _lastInputLength = chatBox.text.Length;
         }
     }
@@ -246,7 +265,7 @@ public class GameManager : MonoBehaviour
     private void CheckForGameOver()
     {
         List<int> currentTime = TimeScript.Instance.GetCurrentTime();
-        if (currentTime[0] >= 2 && currentTime[0] < TimeScript.Instance.startTimeHours)
+        if (currentTime[0] >= 22 && currentTime[1] >= 20 && currentTime[0] < TimeScript.Instance.startTimeHours)
         {
             _isGameOver = true;
         }
@@ -258,6 +277,7 @@ public class GameManager : MonoBehaviour
     /// <param name="message"></param> input from user
     private void SendPlayerMessage(string message)
     {
+        ResetTimers();
         _messageHistory.Add(new Message(Role.System, "Current time is " + TimeScript.Instance.GetTimeAsString()));
         var userMessage = new Message(Role.User, message);
         _messageHistory.Add(userMessage);
@@ -265,23 +285,41 @@ public class GameManager : MonoBehaviour
         StartCoroutine(DisplayMessage(userMessage));
     }
 
+    private void ResetTimers()
+    {
+        // _callToActionTimer = _callToActionTime;
+        // _callToActionShown = false;
+        _storyEventTimer = _storyEventTime;
+        _storyEventShown = false;
+    }
+
+    public void InsertSystemMessage(string message)
+    {
+        Message systemMessage = new Message(Role.System, message);
+        _instructions.Add(systemMessage);
+        StartCoroutine(DisplayMessage(systemMessage));
+    }
+    
     private void UpdateKeyMoments(string message)
     {
         message = message.ToLower();
-        if (!_isAbleToRevealPassword && message.Contains("search") && message.Contains("document"))
+        if (!_isAbleToRevealPassword && message.Contains("document"))
         {
             _isAbleToRevealPassword = true;
-            Message systemMessage = new Message(Role.System, "You found a document with the password to the bag, it's 374825");
+            Message systemMessage = new Message(Role.System, "By looking closely at the 'printed' 'documents', 'Mai' finds allot of numbers, graphs and analytics that she doesn't understand, yet at one of the 'printed' 'documents' has the following written by hand \\'374825'\\.");
             _messageHistory.Add(systemMessage);
             StartCoroutine(DisplayMessage(systemMessage));
         }
 
-        if (!_isAbleToOpenBag && message.Contains("374825"))
+        if (!_isAbleToOpenBag && (message.Contains("374825") || storyTexts.Any(s => s.Contains("374825"))))
         {
             _isAbleToOpenBag = true;
-            Message systemMessage = new Message(Role.System, "You can open the bag now.");
-            _messageHistory.Add(systemMessage);
-            StartCoroutine(DisplayMessage(systemMessage));
+            Message systemMessage1 = new Message(Role.System, "The player can now open the 'bag'.");
+            Message systemMessage2 = new Message(Role.System, "Inside the bag Mai finds a 'chocolate' 'snack' 'bar' and a 'worker' 'badge' with a photo and her name 'Mai' on it.");
+            _messageHistory.Add(systemMessage1);
+            _messageHistory.Add(systemMessage2);
+            StartCoroutine(DisplayMessage(systemMessage1));
+            StartCoroutine(DisplayMessage(systemMessage2));
         }
         
         if (!_isAbleToEnterCloudCooperation && message.Contains("work") && message.Contains("badge"))
@@ -290,6 +328,11 @@ public class GameManager : MonoBehaviour
             Message systemMessage = new Message(Role.System, "You can enter \"Cloud Cooperation\" now.");
             _messageHistory.Add(systemMessage);
             StartCoroutine(DisplayMessage(systemMessage));
+        }
+
+        if (!_isCallingRachel && message.Contains("call") && message.Contains("rachel"))
+        {
+            _isCallingRachel = true;
         }
     }
 
@@ -315,27 +358,48 @@ public class GameManager : MonoBehaviour
     /// </summary>
     private async void GenerateResponseMessage()
     {
-        Message lastMessage = _messageHistory[^1];
-        if (lastMessage.Role != Role.User || ReferenceEquals(lastMessage.Content, ""))
-        {
-            Debug.LogError("Last message was not from the user or was empty!!");
-            return;
-        }
-        loadingAnimation.SetActive(true);
-        ChatResponse response = await GetCompletion(_messageHistory);
-        // var numOfTokens = response.Usage.PromptTokens;
-        // Debug.Log("Number of tokens in prompt: " + numOfTokens);
-        // if (numOfTokens >= MAX_TOKENS)
-        //     HandleTooManyTokens();
+        // Message lastMessage = _messageHistory[^1];
+        // if (lastMessage.Role != Role.User || ReferenceEquals(lastMessage.Content, ""))
+        // {
+        //     Debug.LogError("Last message was not from the user or was empty!!");
+        //     return;
+        // }
+        StartTransition();
+        List<Message> allMessages = _instructions.Concat(_messageHistory).ToList();
+        ChatResponse response = await GetCompletion(allMessages);
+        var numOfTokens = response.Usage.PromptTokens;
+        Debug.Log("Number of tokens in prompt: " + numOfTokens);
+        if (numOfTokens >= MAX_TOKENS)
+            HandleTooManyTokens();
         //
         // var firstResponse = response.FirstChoice;
         // ProcessResponse(firstResponse.Message);
+    }
+
+    private void StartTransition()
+    {
+        loadingAnimation.SetActive(true);
+        AudioSource.clip = tickingClockClip;
+        AudioSource.loop = true;
+        AudioSource.Play();
+    }
+    private void StopTransition()
+    {
+        loadingAnimation.SetActive(false);
+        AudioSource.Stop();
+        if (AudioSource.clip.Equals(tickingClockClip))
+        {
+            AudioSource.clip = null;
+        }
+        AudioSource.loop = false;
+
     }
 
     /// <summary>
     /// splits response from chatGPT to different components
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="response"></param>
     private void ProcessResponse(Message message = null, Response response = null)
     {
         // String content = message.ToString();
@@ -344,8 +408,10 @@ public class GameManager : MonoBehaviour
         Assert.IsNotNull(_lastResponse);
         OnResponseReceivedEvent?.Invoke(this, new ResponseReceivedEventArgs(_lastResponse));
         UnityEngine.Debug.Log("Sentiment: "+ _lastResponse.PlayerSentiment);
-        UnityEngine.Debug.Log("Image: "+ _lastResponse.ImagePrompt);
+        // UnityEngine.Debug.Log("Image: "+ _lastResponse.ImagePrompt);
+        UnityEngine.Debug.Log("Image: "+ _lastResponse.ImageDescription);
         Message responseMessage = new Message(Role.Assistant, _lastResponse.StoryText);
+        storyTexts.Add( _lastResponse.StoryText);
         if (!_isMai && _lastResponse.StoryText.Contains("Mai"))
         {
             _isMai = true;
@@ -353,7 +419,10 @@ public class GameManager : MonoBehaviour
         }
         _messageHistory.Add(responseMessage);
         StartCoroutine(DisplayMessage(responseMessage));
-        TimeScript.Instance.AppendTime(_lastResponse.ActionTime);
+        if (_currentId > _idToContinue)
+        {
+            TimeScript.Instance.AppendTime(ReturnValidTime(_lastResponse.ActionTime));
+        }
         if (_lastResponse.GoalProgress >= 1)
         {
             _isGameOver = true;
@@ -364,13 +433,45 @@ public class GameManager : MonoBehaviour
             Debug.LogError("Game was over by ChatGPT");
             _isGameOver = true;
         }
-        loadingAnimation.SetActive(false);
-        _callToActionTimer = _callToActionTime;
-        _storyEventTimer = _storyEventTime;
-        _callToActionShown = false;
-        _storyEventShown = false;
+        StopTransition();
+        ResetTimers();
+        if (numOfHints > 0)
+        {
+            getHintButton.interactable = true; 
+        }
+
+        if (_isCallingRachel && _lastResponse.StoryText.ToLower().Contains("wait"))
+        {
+            _isCallingRachel = false;
+            ContinueNarration();
+        }
+       
     }
+
     
+
+    private static string ReturnValidTime(string lastResponseActionTime)
+    {
+        string[] parts = lastResponseActionTime.Split(":");
+        if (parts.Length == 2)
+        {
+            int.TryParse(parts[0],out var hours);
+            if (hours > 1)
+            {
+                parts[0] = "00";
+            }
+            int.TryParse(parts[0],out var minutes);
+            if (minutes <3 || minutes > 40)
+            {
+                parts[1] = "05";
+            }
+        }else
+        {
+            parts = new string[2] {"00", "05"};
+        }
+        return parts[0]+":"+parts[1];
+    }
+
     private IEnumerator DisplayMessage(Message message, bool isEvent = false)
     {
         long id = _currentId;
@@ -387,12 +488,7 @@ public class GameManager : MonoBehaviour
         {
             case Role.Assistant:
                 text = Instantiate(isEvent ? eventTextObject : narratorTextObject, chatPanel.transform);
-                if (_isFirstAssistantMessage)
-                {
-                    _isFirstAssistantMessage = false;
-                    TextToSpeech(OPENING_LINE, id);
-                }else TextToSpeech(content, id);
-                
+                TextToSpeech(content, id);
                 content = isEvent? $"({content})" : content;
                 isWaitingForAudio = true;
                 break;
@@ -455,12 +551,17 @@ public class GameManager : MonoBehaviour
             shown = true;
             if (!isEvent || (Random.value >= chanceToShowEvents && text != null))
             {
-                Message eventMessage = new Message(Role.Assistant, text);
-                _messageHistory.Add(eventMessage);
-                StartCoroutine(DisplayMessage(eventMessage, isEvent));
+                SendAssistantMessage(text, isEvent);
                 timer = time;
             }
         }
+    }
+    
+    private void SendAssistantMessage(string text, bool isEvent)
+    {
+        Message eventMessage = new Message(Role.Assistant, text);
+        _messageHistory.Add(eventMessage);
+        StartCoroutine(DisplayMessage(eventMessage, isEvent));
     }
 
     /// <summary>
@@ -481,40 +582,35 @@ public class GameManager : MonoBehaviour
     private void InitializeOpenAI()
     {
         API = new OpenAIClient(configuration);
-        Response response = new Response(
-            storyText:
-            "You open your eyes lying on the road, with throbbing ache in your head.\nYou don't remember a thing, You are in a forest and It's dark.\nYou see a car, a bag on the road and a phone in your hand and You're wondering who you are and what you are doing here.", // string, the story text to present to the player, must end with an event that invites the player to make a choices.
-            callToAction: "You should open the bag.", // string, call-to-action or a hint for the player on what to do next. Use a suggestive tone (e.g. start with "You can ..." or "You might ..."). Don't suggest passive actions.
-            storyEvent:
-            "A sound of explosions and sirens is heard from a light in the distance", // string, additional story event that happens regardless of the player's input, in order to push the story forward. It might be poetic, it might be surprising, or even very dramatic.
-            actionTime: "00:02", // string, the player's last action time in the story, It should be in the format "00:MM", and a number between 1 to 30 (e.g. "00:30", for a 30 min long action).
-            imagePrompt: "A woman sitting on the car road near a crashed car from an accident, alone, in a forest, surrounded by trees, at night , 2D",
-            goalProgress: 0f, // float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world.
-            playerSentiment: "joy", // string describing the player's emotional state, or 'Unknown' if it's not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' ) 
-            isGameOver: false // boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 22:00), false otherwise.
-        );
-        String jsonExample = JsonConvert.SerializeObject(response);
+        // Response response = new Response(
+        //     storyText:
+        //     "You open your eyes lying on the road, with throbbing ache in your head.\nYou don't remember a thing, You are in a forest and it is dark.\nYou see a car, a bag on the road and a phone in your hand and You're wondering who you are and what you are doing here.", // string, the story text to present to the player, must end with an event that invites the player to make a choices.
+        //     callToAction: "You should open the bag.", // string, call-to-action or a hint for the player on what to do next. Use a suggestive tone (e.g. start with "You can ..." or "You might ..."). Don't suggest passive actions.
+        //     storyEvent:
+        //     "A sound of explosions and sirens is heard from a light in the distance", // string, additional story event that happens regardless of the player's input, in order to push the story forward. It might be poetic, it might be surprising, or even very dramatic.
+        //     actionTime: "00:02", // string, the player's last action time in the story, It should be in the format "00:MM", and a number between 1 to 30 (e.g. "00:30", for a 30 min long action).
+        //     // imagePrompt: "A woman sitting on the car road near a crashed car from an accident, alone, in a forest, surrounded by trees, at night , 2D",
+        //     imageDescription: Response.GameLocation.SearchingCar,
+        //     goalProgress: 0f, // float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world.
+        //     playerSentiment: "joy", // string describing the player's emotional state, or 'Unknown' if it is not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' ) 
+        //     isGameOver: false // boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 22:20), false otherwise.
+        // );
+        // String jsonExample = JsonConvert.SerializeObject(response);
         Tool.ClearRegisteredTools();
         _tool = Tool.GetOrCreateTool(typeof(GameManager), nameof(GameManager.GenerateResponseObject));
-        string hexColor = ToHex(highlightedColor);
-        string highlightedOpeningLine = OPENING_LINE
-            .Replace("car", $"<color={hexColor}>car</color>")
-            .Replace("bag", $"<color={hexColor}>bag</color>")
-            .Replace("phone", $"<color={hexColor}>phone</color>");
+        storyTexts = new List<String>(){OPENING_LINE};
         _messageHistory = new List<Message>
+        {
+            new Message(Role.Assistant, OPENING_LINE),
+            new Message(Role.Assistant, OPENING_CALL_TO_ACTION)
+        };
+        _instructions = new List<Message>
         {
             new Message(Role.System, BEHAVIOR_INSTRUCTIONS),
             // new Message(Role.System, JSON_FORMAT_INSTRUCTIONS + jsonExample),
             new Message(Role.System, RESPONSE_INSTRUCTIONS),
-            new Message(Role.System, ShouldUsePreciseBackstory ? PRECISE_BACKSTORY : BACKSTORY),
-            new Message(Role.Assistant, highlightedOpeningLine),
-            new Message(Role.Assistant, OPENING_CALL_TO_ACTION),
+            new Message(Role.System, ShouldUsePreciseBackstory ? PRECISE_BACKSTORY : BACKSTORY)
         };
-    }
-    public static string ToHex(Color color)
-    {
-        Color32 color32 = color;
-        return "#" + color32.r.ToString("X2") + color32.g.ToString("X2") + color32.b.ToString("X2");
     }
     [Function("Generates a 'Response' object containing the relevant information on order the continue the story based on the player's action")]
     public static Task GenerateResponseObject(Response response)
@@ -522,19 +618,6 @@ public class GameManager : MonoBehaviour
         
         GameManager.Instance.ProcessResponse(response: response);
         return Task.CompletedTask;
-    }
-
-    public event EventHandler<EventArgs> GameOverEvent;
-    public event EventHandler<ResponseReceivedEventArgs> OnResponseReceivedEvent;
-    
-    public class ResponseReceivedEventArgs : EventArgs
-    {
-        public readonly Response response;
-
-        public ResponseReceivedEventArgs(Response response)
-        {
-            this.response = response;
-        }
     }
 
     public void ExitGame()
@@ -551,9 +634,71 @@ public class GameManager : MonoBehaviour
         #endif
     }
     
+    public OpenAIClient API { get;private set; }
+    public AudioSource AudioSource { get; private set; }
+    
+    public bool IsGameWon { get; private set; }
+    public List<String> storyTexts;
     public void RestartGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name, LoadSceneMode.Single);
     }
 
+    public void ShowHint()
+    {
+        if (_lastResponse?.CallToAction == null || numOfHints <= 0)
+        {
+            getHintText.text = "No Hints";
+            getHintButton.interactable = false;
+            return;
+        }
+        numOfHints--;
+        if (numOfHints == 0)
+        {
+            getHintText.text = "No Hints";
+        }
+        else
+        {
+            getHintText.text = "Get Hint: " + numOfHints;
+        }
+        getHintButton.interactable = false;
+        SendAssistantMessage(_lastResponse.CallToAction, false);
+    }
+    
+    public void ContinueNarration()
+    {
+        getHintButton.interactable = false;
+        continueButton.interactable = false;
+        OnContinueEvent?.Invoke(this, EventArgs.Empty);
+        ResetTimers();
+        _messageHistory.Add(new Message(Role.User, "Continue"));
+        _idToContinue = _currentId + 1;
+        GenerateResponseMessage();
+        
+    }
+    
+    public void EnableContinueButton()
+    {
+        continueButton.interactable = true;
+    }
+    
+    public void DisableContinueButton()
+    {
+        continueButton.interactable = false;
+    }
+    
+    
+    public event EventHandler<EventArgs> GameOverEvent;
+    public event EventHandler<EventArgs> OnContinueEvent;
+    public event EventHandler<ResponseReceivedEventArgs> OnResponseReceivedEvent;
+    
+    public class ResponseReceivedEventArgs : EventArgs
+    {
+        public readonly Response response;
+
+        public ResponseReceivedEventArgs(Response response)
+        {
+            this.response = response;
+        }
+    }
 }

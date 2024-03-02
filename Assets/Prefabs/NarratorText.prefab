@@ -154,6 +154,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e57bad0409c34bb4bde67efe321e68e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  highlightedColor: {r: 0.9843137, g: 0.9607843, b: 0, a: 0}
   enableSkip: 1
   timeBetweenChars: 0.04
   leadingChar: ' |'

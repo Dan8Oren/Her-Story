@@ -16,6 +16,7 @@ public class SideClockScript : MonoBehaviour
     {
         _sideText = GetComponent<TextMeshProUGUI>();
         _oldText = _sideText.text;
+        UpdateDigits(_sideText.text);
     }
 
     private void FixedUpdate()

@@ -28,10 +28,13 @@ public class Response
     public string ActionTime {get; private set;}
     
     
-    [FunctionProperty("a description of the image that should be displayed to the player, it should be a 2D image that represents the current state of the story, Mai if she apears, must look the same in all of them."
-        , true)] 
-    [JsonProperty("imagePrompt")]
-    public string ImagePrompt {get; private set;}
+    // [FunctionProperty("a description of the image that should be displayed to the player, it should be a 2D image that represents the current state of the story, Mai if she apears, must look the same in all of them."
+    //     , true)] 
+    // [JsonProperty("imagePrompt")]
+    // public string ImagePrompt {get; private set;}
+    [FunctionProperty("The image describing the context of the current storyEvent", true)] 
+    [JsonProperty("image")]
+    public GameLocation ImageDescription {get; private set;}
     
     
     [FunctionProperty("float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world."
@@ -51,15 +54,26 @@ public class Response
     public bool IsGameOver {get; private set;}
     
     [JsonConstructor]
-    public Response(string storyText, string callToAction, string storyEvent, string actionTime, string imagePrompt, float goalProgress, string playerSentiment, bool isGameOver)
+    public Response(string storyText, string callToAction, string storyEvent, string actionTime, GameLocation imageDescription, float goalProgress, string playerSentiment, bool isGameOver)
     {
         this.StoryText = storyText;
         this.CallToAction = callToAction;
         this.StoryEvent = storyEvent;
         this.ActionTime = actionTime;
-        this.ImagePrompt = imagePrompt;
+        // this.ImagePrompt = imagePrompt;
+        this.ImageDescription = imageDescription;
         this.GoalProgress = goalProgress;
         this.PlayerSentiment = playerSentiment;
         this.IsGameOver = isGameOver;
     }
+    public enum GameLocation
+    {
+        ForestCrashSite,
+        SearchingCar,
+        LookingAtPhone,
+        ThroughTheForest,
+        CloudCooperationBuilding,
+        Unknown
+    }
+        
 }

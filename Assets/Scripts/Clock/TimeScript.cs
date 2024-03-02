@@ -29,15 +29,15 @@ public class TimeScript : MonoBehaviour
         {
             Destroy(this);
         }
-    }
-
-    private void Start()
-    {
         _timer = new WaitForSeconds(timeToBlink);
         _currentTime = new List<int> {startTimeHours, 0};
         _blinkCoroutine = StartCoroutine(Blink());
         SetHours();
         SetMinutes();
+    }
+
+    private void Start()
+    {
         GameManager.Instance.GameOverEvent += GameOverBehaviour;
     }
 

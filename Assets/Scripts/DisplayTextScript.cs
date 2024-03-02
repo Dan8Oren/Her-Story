@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using OpenAI.Audio;
 using OpenAI.Models;
 using TMPro;
@@ -11,7 +12,8 @@ using UnityEngine.Assertions;
 public class DisplayTextScript : MonoBehaviour
 {
     private const string HTML_ALPHA = "<color=#00000000>";
-
+    
+    [SerializeField] private Color highlightedColor;
     public bool enableSkip;
     [SerializeField] private float timeBetweenChars;
     [SerializeField] string leadingChar = "";
@@ -87,7 +89,7 @@ public class DisplayTextScript : MonoBehaviour
             yield return new WaitUntil(() => GameManager.Instance.AudioSource.isPlaying);
         }
         IsPlaying = true;
-        var chars = dialog.Replace("\\n", "\n").Replace("\\t", "\t").ToCharArray();
+        var chars = dialog.ToCharArray();
         var tempToShow = new string("");
         var isOnHtml = false;
         var closing = 0;
@@ -136,7 +138,22 @@ public class DisplayTextScript : MonoBehaviour
         _isWaitingForAudio = isWaitingForAudio;
         _textId = textId;
         _textToDisplay = text.Replace("\\n", "\n").Replace("\\t", "\t");
+        _textToDisplay = WrapWordsInColor(_textToDisplay,ToHex(highlightedColor));
         _callback = callback;
+    }
+    
+    public static string ToHex(Color color)
+    {
+        Color32 color32 = color;
+        return "#" + color32.r.ToString("X2") + color32.g.ToString("X2") + color32.b.ToString("X2");
+    }
+    
+    string WrapWordsInColor(string text, string colorHex)
+    {
+        // string pattern = @" ('(\w+(?:\s+\w+)?)'(?:[ ,.!?]|$))";
+        string pattern = @" (?<!')'(.*?)'";
+        string replacedText = Regex.Replace(text, pattern, $"<color={colorHex}> $1</color>");
+        return replacedText;
     }
     
     public event EventHandler<SkipMessageEventArgs> SkipMessageEvent;
@@ -149,6 +166,4 @@ public class DisplayTextScript : MonoBehaviour
             TextId = id;
         }
     }
-
-
 }
