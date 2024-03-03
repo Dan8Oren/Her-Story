@@ -136,10 +136,10 @@ public class GameManager : MonoBehaviour
                                      "Looking at the chocolate snack bar, Mai feels a deep urge inside of her, not being able to resist she eats it almost uncontrollbly."+
                                      "Mai takes the badge and opens her phone, at the phone she has four options to choose from, the 'Photos' app, 'News' app, 'Calls' app, 'Internet-Browser' app and 'Messages' app.\n" +
                                      "At her Photos she sees an images of her in a company named \"Cloud Cooperation\" and nothing else.\n" +
+                                     "At the 'Internet-Browser' she can find on the browser's history, allot of traffic on a site named www.CloudCooparation.com.\n"+
                                      "At the News App she sees havoc all over the world, traffic lights lost logic, thousands dead by accidents,all currencies lost their value, riots, and more..\n" +
                                      "At her Calls she has allot of missed calls from names she doesn't remember.\n" +
                                      "At her messages she sees a message from 'Rachel my Boss' saying \"Mai, call me as soon as you can, it is urgent\".\n" +
-                                     "At the Internet Browser she find about 'Cloud Cooperation', and that this is a huge company with a very popular Artificial intelligence.\n" +
                                      "By getting into the workers section at the 'Cloud Cooperation' website, she finds her self and It is written 'Artificial intelligence ethics consultant'.\n" +
                                      "When Mai calls her boss, she finds out that the AI she consult to, started behave wrong making allot of accidents and as a result people are dead, she needs to get back to work and stop it.\n" +
                                      "Not knowing the true goals of the AI, Mai tries to find her way to work, looking at the car near her she understand it is damaged and not operational.\n" +
@@ -181,6 +181,8 @@ public class GameManager : MonoBehaviour
     private bool _isAbleToRevealPassword;
     private bool _isAbleToOpenBag;
     private bool _isCallingRachel;
+    private bool _foundAboutCloudCooperation;
+    private bool _isFirstGameOver = true;
 
 
     private void Awake()
@@ -192,22 +194,43 @@ public class GameManager : MonoBehaviour
         IsGameWon = false;
         GameOverEvent += (sender, args) =>
         {
+            if (!_isFirstGameOver)
+            {
+                return;
+            }
+            _isFirstGameOver = false;
             getHintButton.interactable = false;
             continueButton.interactable = false;
-            gameOverPopUp.SetActive(true);
-            // var time = TimeScript.Instance.GetCurrentTime();
             if (IsGameWon)
             {
                 AudioSource.PlayOneShot(gameWonClip);
                 gameOverText.text = "You Won!";
                 gameOverText.color = winColor;
+                gameOverPopUp.SetActive(true);
                 return;
             }
             Message gameOverMessage = new Message(Role.Assistant, GAME_OVER_MESSAGE);
             AudioSource.PlayOneShot(gameLoseClip);
-            StartCoroutine(DisplayMessage(gameOverMessage));
+            StartCoroutine(DisplayLastMessage(gameOverMessage));
             gameOverText.text = "You Lost!";
         };
+    }
+
+    private IEnumerator DisplayLastMessage(Message message)
+    {
+        if (_lastTextDisplay != null)
+        {
+            yield return new WaitUntil(() => _lastTextDisplay.IsPlaying == false && _isLastMessageStartedPlaying && AudioSource.isPlaying == false);
+        }
+        _isLastMessageStartedPlaying = false;
+        string content = message.ToString();
+        GameObject text = Instantiate(eventTextObject, chatPanel.transform);
+        TextToSpeech(content, _currentId+1);
+        _lastTextDisplay = text.GetComponent<DisplayTextScript>();
+        Assert.IsNotNull(_lastTextDisplay);
+        _lastTextDisplay.enabled = true;
+        _lastTextDisplay.SetDisplayText(content, _currentId+1, true,textViewBehavior.ScrollToBottom);
+        gameOverPopUp.SetActive(true);
     }
 
     private void Start()
@@ -255,7 +278,7 @@ public class GameManager : MonoBehaviour
             {
                 SendPlayerMessage(chatBox.text);
                 GenerateResponseMessage();
-                CheckForGameOver();
+                // CheckForGameOver();
                 chatBox.text = "";
             }
         }
@@ -265,8 +288,18 @@ public class GameManager : MonoBehaviour
     private void CheckForGameOver()
     {
         List<int> currentTime = TimeScript.Instance.GetCurrentTime();
-        if (currentTime[0] >= 22 && currentTime[1] >= 20 && currentTime[0] < TimeScript.Instance.startTimeHours)
+        if (currentTime[0] >= 22 && currentTime[1] >= 20 || currentTime[0] < TimeScript.Instance.startTimeHours)
         {
+            _isGameOver = true;
+        }
+        if (_lastResponse.GoalProgress >= 1)
+        {
+            _isGameOver = true;
+            IsGameWon = true;
+        }
+        else if (_lastResponse.IsGameOver)
+        {
+            Debug.LogError("Game was over by ChatGPT");
             _isGameOver = true;
         }
     }
@@ -303,6 +336,10 @@ public class GameManager : MonoBehaviour
     private void UpdateKeyMoments(string message)
     {
         message = message.ToLower();
+        if (!_foundAboutCloudCooperation && storyTexts.Any(s => s.ToLower().Contains("cloud cooperation")))
+        {
+            _foundAboutCloudCooperation = true;
+        }
         if (!_isAbleToRevealPassword && message.Contains("document"))
         {
             _isAbleToRevealPassword = true;
@@ -328,6 +365,27 @@ public class GameManager : MonoBehaviour
             Message systemMessage = new Message(Role.System, "You can enter \"Cloud Cooperation\" now.");
             _messageHistory.Add(systemMessage);
             StartCoroutine(DisplayMessage(systemMessage));
+        }
+
+        if (message.Contains("internet") || message.Contains("browser"))
+        {
+            if (!_internetBrowserMessagesDisplayed[0])
+            {
+                _internetBrowserMessagesDisplayed[0] = true;
+                Message systemMessage = new Message(Role.System,
+                    "Respond with: \"What would you like to do on the internet browser?\"");
+                _messageHistory.Add(systemMessage);
+                StartCoroutine(DisplayMessage(systemMessage));
+            }
+
+            if (!_internetBrowserMessagesDisplayed[1] && _foundAboutCloudCooperation)
+            {
+                _internetBrowserMessagesDisplayed[1] = true;
+                Message systemMessage = new Message(Role.System, "At the Internet Browser she find about 'Cloud Cooperation', and that this is a huge company with a very popular Artificial intelligence.");
+                _messageHistory.Add(systemMessage);
+                StartCoroutine(DisplayMessage(systemMessage));
+            }
+            
         }
 
         if (!_isCallingRachel && message.Contains("call") && message.Contains("rachel"))
@@ -408,7 +466,6 @@ public class GameManager : MonoBehaviour
         Assert.IsNotNull(_lastResponse);
         OnResponseReceivedEvent?.Invoke(this, new ResponseReceivedEventArgs(_lastResponse));
         UnityEngine.Debug.Log("Sentiment: "+ _lastResponse.PlayerSentiment);
-        // UnityEngine.Debug.Log("Image: "+ _lastResponse.ImagePrompt);
         UnityEngine.Debug.Log("Image: "+ _lastResponse.ImageDescription);
         Message responseMessage = new Message(Role.Assistant, _lastResponse.StoryText);
         storyTexts.Add( _lastResponse.StoryText);
@@ -417,22 +474,13 @@ public class GameManager : MonoBehaviour
             _isMai = true;
             chatBox.placeholder.GetComponent<TextMeshProUGUI>().text = "Enter your action here, Mai...";
         }
-        _messageHistory.Add(responseMessage);
-        StartCoroutine(DisplayMessage(responseMessage));
         if (_currentId > _idToContinue)
         {
             TimeScript.Instance.AppendTime(ReturnValidTime(_lastResponse.ActionTime));
         }
-        if (_lastResponse.GoalProgress >= 1)
-        {
-            _isGameOver = true;
-            IsGameWon = true;
-        }
-        else if (_lastResponse.IsGameOver)
-        {
-            Debug.LogError("Game was over by ChatGPT");
-            _isGameOver = true;
-        }
+        CheckForGameOver();
+        _messageHistory.Add(responseMessage);
+        StartCoroutine(DisplayMessage(responseMessage));
         StopTransition();
         ResetTimers();
         if (numOfHints > 0)
@@ -443,6 +491,7 @@ public class GameManager : MonoBehaviour
         if (_isCallingRachel && _lastResponse.StoryText.ToLower().Contains("wait"))
         {
             _isCallingRachel = false;
+            Message systemMessage = new Message(Role.System, "In your next storyText Rachel picks up and speak with Mai.");
             ContinueNarration();
         }
        
@@ -475,8 +524,8 @@ public class GameManager : MonoBehaviour
     private IEnumerator DisplayMessage(Message message, bool isEvent = false)
     {
         long id = _currentId;
-        bool isWaitingForAudio = false;
         _currentId++;
+        bool isWaitingForAudio = false;
         if (_lastTextDisplay != null)
         {
             yield return new WaitUntil(() => _lastTextDisplay.IsPlaying == false && _isLastMessageStartedPlaying && AudioSource.isPlaying == false);
@@ -517,11 +566,16 @@ public class GameManager : MonoBehaviour
             yield return new WaitUntil(() => _lastTextDisplay.IsPlaying == false && _isLastMessageStartedPlaying && AudioSource.isPlaying == false);
             GameOverEvent?.Invoke(this, EventArgs.Empty);
         }
+
     }
 
     private void OnSkipMessage(object sender, DisplayTextScript.SkipMessageEventArgs e)
     {
         _idsToStop.Add(e.TextId);
+        if (AudioSource.clip != null && AudioSource.clip.Equals(tickingClockClip))
+        {
+            return;
+        }
         AudioSource.Stop();
     }
 
@@ -639,6 +693,8 @@ public class GameManager : MonoBehaviour
     
     public bool IsGameWon { get; private set; }
     public List<String> storyTexts;
+    private List<bool> _internetBrowserMessagesDisplayed = new List<bool>(){false,false};
+
     public void RestartGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name, LoadSceneMode.Single);
@@ -667,12 +723,12 @@ public class GameManager : MonoBehaviour
     
     public void ContinueNarration()
     {
+        OnContinueEvent?.Invoke(this, EventArgs.Empty);
         getHintButton.interactable = false;
         continueButton.interactable = false;
-        OnContinueEvent?.Invoke(this, EventArgs.Empty);
         ResetTimers();
         _messageHistory.Add(new Message(Role.User, "Continue"));
-        _idToContinue = _currentId + 1;
+        _idToContinue = _currentId;
         GenerateResponseMessage();
         
     }

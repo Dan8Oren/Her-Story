@@ -33,9 +33,10 @@ public class ImageManager : MonoBehaviour
     private void UpdateContinuesCountInCurrentImage(object sender, EventArgs e)
     {
         _currentImageContinues++;
-        if (_currentImageContinues >= 2 && _currentImageIndex == 1)
+        if (_isFirsts[3] && _currentImageContinues >= 2 && _currentImageIndex == 1)
         {
-            GameManager.Instance.InsertSystemMessage("In your next storyText you must continue the story to the 'Cloud Cooperation Building'");
+            _isFirsts[3] = false;
+            GameManager.Instance.InsertSystemMessage("Mai Sees 'Cloud Cooperation' Building, trough the trees. she gets into the building entrance");
         }
     }
 
@@ -79,10 +80,14 @@ public class ImageManager : MonoBehaviour
                     _currentImageContinues = 0;
                 }
                 _imageComponent.sprite = images[3];
-                _currentImageIndex = 0;
+                _currentImageIndex = 1;
                 return;
             case Response.GameLocation.CloudCooperationBuilding:
                 GameManager.Instance.EnableContinueButton();
+                if (!_imageComponent.sprite.Equals(images[3])) //can't get to the building without going through the forest
+                {
+                    return;
+                }
                 if (!_imageComponent.sprite.Equals(images[4]))
                 {
                     _currentImageContinues = 0;
