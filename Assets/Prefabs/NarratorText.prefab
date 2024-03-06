@@ -69,14 +69,14 @@ MonoBehaviour:
   m_text: 'You open your eyes lying on the road, with throbbing ache in your head.
 
     You
-    don''t remember a thing, You are in a forest and It''s dark.
+    don''t remember a thing, You are in a forest and it is dark.
 
     You see a car,
-    a bag on the road and a phone in your hand and you''re wondering who you are
+    a bag on the road and a phone in your hand and You''re wondering who you are
     and what you are doing here.'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: e4f9714f579496b479dcd755eac58926, type: 2}
-  m_sharedMaterial: {fileID: 5887522086473406505, guid: e4f9714f579496b479dcd755eac58926, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 47077180c0fd102418adc10310953ba7, type: 2}
+  m_sharedMaterial: {fileID: 2800413048040399028, guid: 47077180c0fd102418adc10310953ba7, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -100,8 +100,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 55
-  m_fontSizeBase: 55
+  m_fontSize: 50
+  m_fontSizeBase: 50
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -110,9 +110,9 @@ MonoBehaviour:
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
   m_textAlignment: 65535
-  m_characterSpacing: 0
-  m_wordSpacing: -18
-  m_lineSpacing: -38.36
+  m_characterSpacing: -6.6
+  m_wordSpacing: 0
+  m_lineSpacing: -4.15
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0

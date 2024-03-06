@@ -68,7 +68,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'You: Walk around to find clues'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: e4f9714f579496b479dcd755eac58926, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 47077180c0fd102418adc10310953ba7, type: 2}
   m_sharedMaterial: {fileID: 5887522086473406505, guid: e4f9714f579496b479dcd755eac58926, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -76,7 +76,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4285422233
-  m_fontColor: {r: 0.5999999, g: 0.35207537, b: 0.4319975, a: 1}
+  m_fontColor: {r: 0.93962264, g: 0.5371804, b: 0.66493976, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -103,7 +103,7 @@ MonoBehaviour:
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
   m_textAlignment: 65535
-  m_characterSpacing: 0
+  m_characterSpacing: -5.91
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -132,7 +132,7 @@ MonoBehaviour:
   m_margin: {x: 10, y: 10, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 0
+  m_hasFontAssetChanged: 1
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &-8298806679674851913

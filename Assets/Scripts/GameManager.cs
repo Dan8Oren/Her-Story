@@ -343,21 +343,34 @@ public class GameManager : MonoBehaviour
         if (!_isAbleToRevealPassword && message.Contains("document"))
         {
             _isAbleToRevealPassword = true;
-            Message systemMessage = new Message(Role.System, "By looking closely at the 'printed' 'documents', 'Mai' finds allot of numbers, graphs and analytics that she doesn't understand, yet at one of the 'printed' 'documents' has the following written by hand \\'374825'\\.");
+            Message systemMessage = new Message(Role.System, "By looking closely at the 'printed' 'documents', you find allot of numbers, graphs and analytics that you don't understand, yet at one of the 'printed' 'documents' has the following written by hand \\'374825'\\.");
             _messageHistory.Add(systemMessage);
             StartCoroutine(DisplayMessage(systemMessage));
         }
-
+        
         if (!_isAbleToOpenBag && (message.Contains("374825") || storyTexts.Any(s => s.Contains("374825"))))
         {
             _isAbleToOpenBag = true;
-            Message systemMessage1 = new Message(Role.System, "The player can now open the 'bag'.");
-            Message systemMessage2 = new Message(Role.System, "Inside the bag Mai finds a 'chocolate' 'snack' 'bar' and a 'worker' 'badge' with a photo and her name 'Mai' on it.");
-            _messageHistory.Add(systemMessage1);
-            _messageHistory.Add(systemMessage2);
-            StartCoroutine(DisplayMessage(systemMessage1));
-            StartCoroutine(DisplayMessage(systemMessage2));
+            // Message systemMessage1 = new Message(Role.System, "The player can now open the 'bag'.");
+            // _messageHistory.Add(systemMessage1);
+            // StartCoroutine(DisplayMessage(systemMessage1));
         }
+        if ( message.Contains("bag"))
+        {
+            if (!_isAbleToOpenBag)
+            {
+                Message systemMessage = new Message(Role.System, "The bag is locked, a 6 digits password is needed in order to open the bag.");
+                _messageHistory.Add(systemMessage);
+                StartCoroutine(DisplayMessage(systemMessage));
+            }
+            else
+            {
+                Message systemMessage = new Message(Role.System, "The bag is open, inside the bag you find a 'chocolate' 'snack' 'bar' and a 'worker' 'badge' with a photo and name 'Mai' on it.");
+                _messageHistory.Add(systemMessage);
+                StartCoroutine(DisplayMessage(systemMessage));
+            }
+        }
+
         
         if (!_isAbleToEnterCloudCooperation && message.Contains("work") && message.Contains("badge"))
         {
