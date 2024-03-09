@@ -340,7 +340,7 @@ public class GameManager : MonoBehaviour
         {
             _foundAboutCloudCooperation = true;
         }
-        if (!_isAbleToRevealPassword && message.Contains("document"))
+        if (!_isAbleToRevealPassword && message.Contains("doc"))
         {
             _isAbleToRevealPassword = true;
             Message systemMessage = new Message(Role.System, "By looking closely at the 'printed' 'documents', you find allot of numbers, graphs and analytics that you don't understand, yet at one of the 'printed' 'documents' has the following written by hand \\'374825'\\.");
@@ -401,7 +401,10 @@ public class GameManager : MonoBehaviour
             
         }
 
-        if (!_isCallingRachel && message.Contains("call") && message.Contains("rachel"))
+        if (!_isCallingRachel &&
+            (message.Contains("cal") || message.Contains("phone")) &&
+            (  message.Contains("bos") || message.Contains("rac") )
+            )
         {
             _isCallingRachel = true;
         }
@@ -412,6 +415,7 @@ public class GameManager : MonoBehaviour
         // "gpt-4-turbo-preview" is the most powerful model available
         Tool[] t = { _tool };
         var chatRequest = new ChatRequest(messages, tools:t, toolChoice:_tool.Function.Name ,model: "gpt-3.5-turbo-0125");
+        // var chatRequest = new ChatRequest(messages, tools:t, toolChoice:_tool.Function.Name ,model: "gpt-4-turbo-preview");
         // var chatRequest = new ChatRequest(messages,model: "gpt-3.5-turbo-0125", responseFormat: ChatResponseFormat.Json);
         ChatResponse response = await API.ChatEndpoint.GetCompletionAsync(chatRequest);
         var usedTool = response.FirstChoice.Message.ToolCalls[0];

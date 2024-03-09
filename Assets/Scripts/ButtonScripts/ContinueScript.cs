@@ -6,37 +6,34 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class ContinueScript : MonoBehaviour
+public class ContinueScript : Button, IPointerEnterHandler, IPointerExitHandler
 {
     public GameObject popupWindow;
+    private bool _isfirst = true;
     
-    private Button _button;
-    private bool _isHovering = false;
-    private void Start()
-    {
-        _button = GetComponent<Button>();
-    }
     
     private void FixedUpdate()
     {
-        if (_button.interactable)
+        if (_isfirst && base.interactable) 
+        {
+            _isfirst = false;
+            popupWindow.SetActive(true);
+            Debug.Log("First time");
+        }
+    }
+    
+    
+    
+    public override void OnPointerEnter(PointerEventData eventData)
+    {
+        if (base.interactable)
         {
             popupWindow.SetActive(true);
-        }else if (!_isHovering)
-        {
-            popupWindow.SetActive(false);
         }
     }
 
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        popupWindow.SetActive(true);
-        _isHovering = true;
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
+    public override void OnPointerExit(PointerEventData eventData)
     {
         popupWindow.SetActive(false);
-        _isHovering = false;
     }
 }
