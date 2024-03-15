@@ -36,7 +36,7 @@ public class ImageManager : MonoBehaviour
         if (_isFirsts[3] && _currentImageContinues >= 2 && _currentImageIndex == 1)
         {
             _isFirsts[3] = false;
-            GameManager.Instance.InsertSystemMessage("Mai Sees 'Cloud Cooperation' Building, trough the trees. she gets into the building entrance");
+            GameManager.Instance.InsertSystemMessage("Mai Sees 'Cloud Cooperation' Building, trough the trees. she arrives at the building entrance");
         }
     }
 

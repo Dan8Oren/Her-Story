@@ -66,8 +66,8 @@ public class GameManager : MonoBehaviour
                                                  "The AI is a super intelligent program that got access to the internet and manipulating electronic things to create havoc and disorder, all while trying to decipher the codes for the U.S. army nuclear bombs.\n" +
                                                  "Add into the storyline apocalyptic scenarios and/or AI related things to give the player a better understanding of the world they are in.\n" +
                                                  "Mai has a phone in their hand, and a bag with them.\n" +
-                                                 "If the \"currentTime\" exceeds \"22:19\" or the player does something wrong, the player loses, describe what what happen and add to the end \"The game has ended. You Lost.\".\n" +
-                                                 "Mai's goal is to get to work in time before \"22:20\", they are the only ones who can stop the AI, if it happen write at the end \"You Won.\".\n" +
+                                                 "If the \"currentTime\" exceeds \"22:29\" or the player does something wrong, the player loses, describe what what happen and add to the end \"The game has ended. You Lost.\".\n" +
+                                                 "Mai's goal is to get to work in time before \"22:30\", they are the only ones who can stop the AI, if it happen write at the end \"You Won.\".\n" +
                                                  "Mai struggles with emotional eating, so make sure to distract her from the goal with opportunities of food and make her feel guilty about it.\n" +
                                                  "Every time Mai feels stressed, anxious, or scared, make sure to add to the end of the output a hunger for something to eat, and every time she eats something, she will feel guilty about it.\n" +
                                                  // "Open the bag only if the last message with a user role, contains the key word [\"374825\"], Otherwise respond with something similar to \"a password is needed in order to open the bag.\" \n"+
@@ -118,8 +118,8 @@ public class GameManager : MonoBehaviour
                                              "Amid her journey to work on foot, citing her vehicle's damage, she overcomes various obstructions and temptings, including aggressive bandits, a chocolate factory, and free ice cream. " +
                                              "She must remain resolute, for time is against her. \n" +
                                              "By \"21:30\", Rachel calls a second time, alerting Mai of the AI's pursuit of nuclear control. " +
-                                             "The military offers a tight deadline; she has until \"22:20\" to halt the AI, for it obeys only her. " +
-                                             "Failure, signifies a nuclear apocalypse. Her goal remains clear - reach work by \"22:20\" to prevent the AI's destructive intentions.\"";
+                                             "The military offers a tight deadline; she has until \"22:30\" to halt the AI, for it obeys only her. " +
+                                             "Failure, signifies a nuclear apocalypse. Her goal remains clear - reach work by \"22:30\" to prevent the AI's destructive intentions.\"";
     private const string BACKSTORY = "Base your output on the following backstory:\n" +
                                      "\"Today, an Artificial Intelligence decided it will be for the best to cure the world from the human beings.\n" +
                                      "News reports are coming in from all over the world, the AI has taken control of the internet and is causing havoc.\n" +
@@ -147,18 +147,19 @@ public class GameManager : MonoBehaviour
                                      "she must be determined to keep walking, becuase time is ticking away. \n" +
                                      "When time sets to \"21:30\" she receives a second call from Rachel her boss," +
                                      " saying The AI is trying to get control over the atomic bombs and find the encrypted password for them," +
-                                     " the military says there is until \"22:20\" before it will be too late, you need to get to work and stop it.\n" +
-                                     "Get to work before \"22:20\", and stop the AI, it listens only to you.\n" +
+                                     " the military says there is until \"22:30\" before it will be too late, you need to get to work and stop it.\n" +
+                                     "Get to work before \"22:30\", and stop the AI, it listens only to you.\n" +
                                      "Any other choice will lead to failure, and the AI nuking all of the world leading to it is end.\"";
     
     
     private const string OPENING_LINE ="You open your eyes lying on the road, with throbbing ache in your head.\n" +
                                       "You don't remember a thing, You are in a forest and it is dark.\n" +
-                                      "You see a 'car', a 'bag' on the road and a 'phone' in your hand and You're wondering who you are and what you are doing here.";
+                                      "You see a 'car', a 'bag' on the road and a 'phone' in your hand and You're wondering who you are and what you are doing here.\n" +
+                                      "What will you do next?";
     
     private const string OPENING_CALL_TO_ACTION = "What will you do next?";
     
-    private const string GAME_OVER_MESSAGE = "'You Lost!, It was too late, on 22:20 PM, the AI lunched over 9000+ atomic bombs all over the word\\n destroyed itself and humanity creating a nuclear winter for the next thousand years.\\n";
+    private const string GAME_OVER_MESSAGE = "'You Lost!, It was too late, on 22:30 PM, the AI lunched over 9000+ atomic bombs all over the word\\n destroyed itself and humanity creating a nuclear winter for the next thousand years.\\n";
     
     private List<Message> _messageHistory = new List<Message>();
     private List<Message> _instructions = new List<Message>();
@@ -183,6 +184,7 @@ public class GameManager : MonoBehaviour
     private bool _isCallingRachel;
     private bool _foundAboutCloudCooperation;
     private bool _isFirstGameOver = true;
+    private bool _isFirstAfterResponse = true;
 
 
     private void Awake()
@@ -259,6 +261,11 @@ public class GameManager : MonoBehaviour
         {
             chatBox.enabled = false;
             return;
+        }
+        if (_isFirstAfterResponse) 
+        {
+            chatBox.ActivateInputField();
+            _isFirstAfterResponse = false;
         }
         chatBox.enabled = true;
         HandleInput();
@@ -446,6 +453,7 @@ public class GameManager : MonoBehaviour
         Debug.Log("Number of tokens in prompt: " + numOfTokens);
         if (numOfTokens >= MAX_TOKENS)
             HandleTooManyTokens();
+        _isFirstAfterResponse = true;
         //
         // var firstResponse = response.FirstChoice;
         // ProcessResponse(firstResponse.Message);
@@ -664,7 +672,7 @@ public class GameManager : MonoBehaviour
         //     imageDescription: Response.GameLocation.SearchingCar,
         //     goalProgress: 0f, // float between 0 and 1. It represents how close is the player to reach his goal. 0 means not at all, 1 means the AI was stopped from destroying the world.
         //     playerSentiment: "joy", // string describing the player's emotional state, or 'Unknown' if it is not clear enough (e.g. 'joy' | 'irritation' | 'sadness' | 'fear' | 'surprise' | 'disgust' | 'empathy' | 'neutral' | 'anger' | 'unknown' ) 
-        //     isGameOver: false // boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 22:20), false otherwise.
+        //     isGameOver: false // boolean, true if 'progress >= 1' or currentTime is past 2 AM (e.g 22:30), false otherwise.
         // );
         // String jsonExample = JsonConvert.SerializeObject(response);
         Tool.ClearRegisteredTools();
@@ -673,7 +681,7 @@ public class GameManager : MonoBehaviour
         _messageHistory = new List<Message>
         {
             new Message(Role.Assistant, OPENING_LINE),
-            new Message(Role.Assistant, OPENING_CALL_TO_ACTION)
+            // new Message(Role.Assistant, OPENING_CALL_TO_ACTION)
         };
         _instructions = new List<Message>
         {
